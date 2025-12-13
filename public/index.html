@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Transscript</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header class="header">
+        <h1>Transscript</h1>
+        <p class="subtitle">
+          Upload an audio file → get a cleaned-up document + raw transcript.
+        </p>
+      </header>
+
+      <section class="card">
+        <form id="uploadForm">
+          <label class="label" for="audioFile">Audio file</label>
+          <input
+            id="audioFile"
+            name="audio"
+            type="file"
+            accept="audio/*,video/*"
+            required
+          />
+          <div class="row">
+            <button id="submitBtn" type="submit">Transcribe</button>
+            <span id="status" class="status" aria-live="polite"></span>
+          </div>
+          <p class="hint">
+            Files over 25MB are downsampled and chunked server-side (requires ffmpeg).
+          </p>
+        </form>
+      </section>
+
+      <section class="card">
+        <div class="sectionHeader">
+          <h2>Consumable Document</h2>
+          <button class="secondary" type="button" id="copyDocBtn" disabled>
+            Copy
+          </button>
+        </div>
+        <pre id="documentOut" class="output">(nothing yet)</pre>
+      </section>
+
+      <section class="card">
+        <div class="sectionHeader">
+          <h2>Raw Transcript</h2>
+          <button class="secondary" type="button" id="copyTranscriptBtn" disabled>
+            Copy
+          </button>
+        </div>
+        <pre id="transcriptOut" class="output">(nothing yet)</pre>
+      </section>
+    </main>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
