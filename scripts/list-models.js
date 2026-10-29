@@ -2,12 +2,12 @@ import "dotenv/config";
 
 import OpenAI from "openai";
 
-if (!process.env.OPENAI_API_KEY) {
-  console.error("Missing OPENAI_API_KEY (set it in .env or your environment).");
+if (!process.env.XAI_API_KEY) {
+  console.error("Missing XAI_API_KEY (set it in .env or your environment).");
   process.exit(1);
 }
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = new OpenAI({ apiKey: process.env.XAI_API_KEY, baseURL: "https://api.x.ai/v1" });
 
 const models = await openai.models.list();
 const rows = (models?.data ?? [])

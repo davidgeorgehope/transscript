@@ -6,7 +6,7 @@ Simple web app: upload audio/video → get (1) a cleaned, document-style version
 
 1. Create `.env`:
    - `cp .env.example .env`
-   - Set `OPENAI_API_KEY=...`
+   - Set `XAI_API_KEY=...`
 2. (Optional, for large files) Install `ffmpeg` (macOS: `brew install ffmpeg`)
 3. Install deps: `npm install`
 4. Run: `npm start`
@@ -14,12 +14,12 @@ Simple web app: upload audio/video → get (1) a cleaned, document-style version
 
 ## Configuration
 
-- `OPENAI_API_KEY` (required)
+- `XAI_API_KEY` (required)
 - `PORT` (default: `3000`)
 - `UPLOAD_MAX_MB` (default: `512`)
-- `OPENAI_TRANSCRIPTION_MODEL` (default: `whisper-1`)
-- `OPENAI_SUMMARY_MODEL` (default: prefers `gpt-5.2`, falls back if unavailable)
-- `OPENAI_REASONING_EFFORT` (default: `high`)
+- `XAI_TRANSCRIPTION_MODEL` (default: `grok-voice-transcribe-2.0`)
+- `XAI_SUMMARY_MODEL` (default: prefers `grok-4.7`, falls back to `grok-4.3`)
+- `XAI_REASONING_EFFORT` (default: `high`)
 - `OPENAI_CHUNK_SECONDS` (default: `1200`)
 - `OPENAI_TRANSCODE_BITRATE` (default: `64k`)
 - `OPENAI_TRANSCODE_SAMPLE_RATE` (default: `16000`)
