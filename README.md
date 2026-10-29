@@ -18,7 +18,7 @@ Simple web app: upload audio/video → get (1) a cleaned, document-style version
 - `PORT` (default: `3000`)
 - `UPLOAD_MAX_MB` (default: `512`)
 - `XAI_TRANSCRIPTION_MODEL` (default: `grok-voice-transcribe-2.0`)
-- `XAI_SUMMARY_MODEL` (default: prefers `grok-4.7`, falls back to `grok-4.3`)
+- `XAI_SUMMARY_MODEL` (default: `grok-4.7`)
 - `XAI_REASONING_EFFORT` (default: `high`)
 - `OPENAI_CHUNK_SECONDS` (default: `1200`)
 - `OPENAI_TRANSCODE_BITRATE` (default: `64k`)
