@@ -3,7 +3,8 @@ import "dotenv/config";
 import express from "express";
 import multer from "multer";
 import OpenAI from "openai";
-import { toFile } from "openai/uploads";
+
+const XAI_BASE_URL = "https://api.x.ai/v1";
 import crypto from "node:crypto";
 import { spawn } from "node:child_process";
 import fs from "node:fs";
@@ -21,13 +22,7 @@ const DEFAULT_CHUNK_SECONDS = 20 * 60;
 const DEFAULT_TRANSCODE_BITRATE = "64k";
 const DEFAULT_TRANSCODE_SAMPLE_RATE = 16000;
 
-const DEFAULT_SUMMARY_MODEL_CANDIDATES = [
-  "gpt-5.2",
-  "gpt-5",
-  "gpt-4.1",
-  "gpt-4o",
-  "gpt-4o-mini"
-];
+const DEFAULT_SUMMARY_MODEL_CANDIDATES = ["grok-4.7", "grok-4.3"];
 
 const DEFAULT_REASONING_EFFORT = "high";
 const MODEL_LIST_CACHE_TTL_MS = 10 * 60 * 1000;
@@ -195,12 +190,18 @@ async function segmentMp3(inputPath, outputPatternPath, chunkSeconds) {
 }
 
 async function transcribeFilePath({ openai, transcriptionModel, filePath, fileName, mimeType }) {
-  const uploadable = await toFile(fs.createReadStream(filePath), fileName, { type: mimeType });
-  const transcription = await openai.audio.transcriptions.create({
-    file: uploadable,
-    model: transcriptionModel,
-    response_format: "json"
+  // xAI speech-to-text (POST /v1/stt, multipart: model + file)
+  const buf = await fsp.readFile(filePath);
+  const form = new FormData();
+  form.append("model", transcriptionModel);
+  form.append("file", new Blob([buf], { type: mimeType || "application/octet-stream" }), fileName);
+  const resp = await fetch(`${XAI_BASE_URL}/stt`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${process.env.XAI_API_KEY}` },
+    body: form
   });
+  if (!resp.ok) throw new Error(`xAI STT ${resp.status}: ${(await resp.text()).slice(0, 300)}`);
+  const transcription = await resp.json();
   return transcription?.text?.trim?.() ? transcription.text : "";
 }
 
@@ -279,7 +280,7 @@ async function transcribeWithChunkingIfNeeded({
       const partStat = await fsp.stat(partPath);
       if (partStat.size > WHISPER_MAX_BYTES) {
         throw new Error(
-          `Chunk ${name} is ${(partStat.size / 1024 / 1024).toFixed(1)}MB which exceeds the 25MB Whisper limit. Reduce OPENAI_CHUNK_SECONDS or OPENAI_TRANSCODE_BITRATE.`
+          `Chunk ${name} is ${(partStat.size / 1024 / 1024).toFixed(1)}MB which exceeds the 25MB upload limit. Reduce OPENAI_CHUNK_SECONDS or OPENAI_TRANSCODE_BITRATE.`
         );
       }
 
@@ -314,31 +315,6 @@ async function generateDocumentText({ openai, model, transcriptText, reasoningEf
 
   const effort = normalizeReasoningEffort(reasoningEffort);
   const temperature = 0.2;
-
-  if (typeof openai?.responses?.create === "function") {
-    const base = { model, input: prompt, temperature };
-    const attempts = effort
-      ? [{ ...base, reasoning: { effort } }, { ...base, reasoning_effort: effort }, base]
-      : [base];
-
-    let lastErr;
-    for (const params of attempts) {
-      try {
-        const resp = await openai.responses.create(params);
-        return extractResponseText(resp);
-      } catch (err) {
-        lastErr = err;
-        const status = Number(err?.status ?? err?.code) || 0;
-        const msg = String(err?.message ?? "").toLowerCase();
-        const maybeParamIssue =
-          status === 400 &&
-          (msg.includes("unknown") || msg.includes("unrecognized") || msg.includes("invalid")) &&
-          msg.includes("reasoning");
-        if (maybeParamIssue) continue;
-      }
-    }
-    throw lastErr ?? new Error("Failed to generate document.");
-  }
 
   const messages = [
     {
@@ -392,9 +368,9 @@ app.use(express.static(path.join(__dirname, "public")));
 app.post("/api/transcribe", upload.single("audio"), async (req, res) => {
   const uploadedPath = req.file?.path;
   try {
-    if (!process.env.OPENAI_API_KEY) {
+    if (!process.env.XAI_API_KEY) {
       return res.status(500).json({
-        error: "Missing OPENAI_API_KEY. Put it in your .env or environment."
+        error: "Missing XAI_API_KEY. Put it in your .env or environment."
       });
     }
 
@@ -407,12 +383,12 @@ app.post("/api/transcribe", upload.single("audio"), async (req, res) => {
       return res.status(400).json({ error: `Unsupported file type: ${mime}` });
     }
 
-    const transcriptionModel = process.env.OPENAI_TRANSCRIPTION_MODEL ?? "whisper-1";
-    const requestedSummaryModel = process.env.OPENAI_SUMMARY_MODEL?.trim?.() ?? "";
+    const transcriptionModel = process.env.XAI_TRANSCRIPTION_MODEL ?? "grok-voice-transcribe-2.0";
+    const requestedSummaryModel = process.env.XAI_SUMMARY_MODEL?.trim?.() ?? "";
     const reasoningEffort = normalizeReasoningEffort(
-      process.env.OPENAI_REASONING_EFFORT ?? DEFAULT_REASONING_EFFORT
+      process.env.XAI_REASONING_EFFORT ?? DEFAULT_REASONING_EFFORT
     );
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const openai = new OpenAI({ apiKey: process.env.XAI_API_KEY, baseURL: XAI_BASE_URL });
 
     const transcriptText = await transcribeWithChunkingIfNeeded({
       openai,
